@@ -190,7 +190,7 @@ local function FireBurgerPrompts()
 end
 
 AutoFarmTab:CreateToggle({
-    Name = "Auto Hunger When Low",
+    Name = "Auto Feed When Low",
     CurrentValue = false,
     Flag = "AutoHunger",
 
