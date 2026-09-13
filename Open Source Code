@@ -1,0 +1,406 @@
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+-- Services
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+-- Player
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+local PeterModel = workspace.Interactables.Peter.Peter
+local DropMoney = PeterModel.Clickable.DropMoney
+local ClickPart = DropMoney.Parent
+local AutoHunger = false
+local Hunger = workspace.DataValues.Hunger
+local Burgers = workspace.Shop.Burgers
+local SecondPrompt = workspace.Scenery.GasStation.GasStationStore.Carl.Decalpart.Attachment.ProximityPrompt
+local RefillPrompt = workspace.Interactables.Objects.Fridge.Doors.InteractionPart.RefillAttachment.ProximityPromptRefill
+local Backpack = game:GetService("Players").LocalPlayer.Backpack
+local function TeleportTo(Position)
+    local Character = LocalPlayer.Character
+    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    if not RootPart then
+        return false
+    end
+
+    RootPart.CFrame = CFrame.new(Position)
+    task.wait(0.4)
+
+    return true
+end
+-- Variables
+local AutoGetRent = false
+local AutoMoreRent = false
+local OriginalHoldDurations = {}
+local PromptAddedConnection = nil
+local FullbrightEnabled = false
+local FullbrightConnection = nil
+local AutoDropMoney = false
+-- Remotes
+local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
+local Joe = RemoteEvents:WaitForChild("Joe")
+local Purchase = RemoteEvents:WaitForChild("Purchase")
+-- Window
+local Window = Rayfield:CreateWindow({
+    Name = "Raise A Peter",
+    LoadingTitle = "MOUSED hub is loading",
+    LoadingSubtitle = "By Nonfakerr",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = "MOUSEDConfig",
+        FileName = "MOUSEDSetting"
+    }
+})
+
+local MainTab = Window:CreateTab("Main", nil)
+local AutoFarmTab = Window:CreateTab("Auto Farm", nil)
+local TeleportTab = Window:CreateTab("Teleport", nil)
+local SettingsTab = Window:CreateTab("Settings", nil)
+--// Main
+MainTab:CreateToggle({
+    Name = "Auto Get Rent",
+    CurrentValue = false,
+    Flag = "AutoGetRent",
+
+    Callback = function(Value)
+        AutoGetRent = Value
+
+        if Value then
+            task.spawn(function()
+                while AutoGetRent do
+                    Joe:FireServer("PayRent")
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Auto More Rent",
+    CurrentValue = false,
+    Flag = "AutoMoreRent",
+
+    Callback = function(Value)
+        AutoMoreRent = Value
+
+        if Value then
+            task.spawn(function()
+                while AutoMoreRent do
+                    Joe:FireServer("DoubleRent")
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Buy Chair",
+    Callback = function()
+        Purchase:InvokeServer("Chair")
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Buy Meg",
+    Callback = function()
+        Purchase:InvokeServer("Meg Griffin")
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Buy TV",
+    Callback = function()
+        Purchase:InvokeServer("TV")
+    end
+})
+--//Auto Farm
+AutoFarmTab:CreateToggle({
+    Name = "Auto Farm Money",
+    CurrentValue = false,
+    Flag = "AutoDropMoney",
+    Callback = function(Value)
+        AutoDropMoney = Value
+
+        if Value then
+            task.spawn(function()
+                while AutoDropMoney do
+                    local Character = LocalPlayer.Character
+
+                    if RootPart and ClickPart:IsA("BasePart") then
+                        RootPart.CFrame = ClickPart.CFrame
+                        fireclickdetector(DropMoney)
+                    end
+
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local function GetBorgir()
+    for _, Tool in ipairs(Backpack:GetChildren()) do
+        if Tool:IsA("Tool") and Tool.Name == "Borgir" then
+            return Tool
+        end
+    end
+
+    return nil
+end
+
+local function EquipBorgir()
+    local Tool = GetBorgir()
+
+    if not Tool then
+        return false
+    end
+
+    local Character = LocalPlayer.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid then
+        Humanoid:EquipTool(Tool)
+        task.wait(0.3)
+        return true
+    end
+
+    return false
+end
+
+local function FireBurgerPrompts()
+    local Bought = 0
+
+    for _, Object in ipairs(Burgers:GetDescendants()) do
+        if Object:IsA("ProximityPrompt") and Object.Enabled then
+            fireproximityprompt(Object)
+            Bought += 1
+
+            if Bought >= 3 then
+                break
+            end
+
+            task.wait(0.05)
+        end
+    end
+end
+
+AutoFarmTab:CreateToggle({
+    Name = "Auto Hunger When Low",
+    CurrentValue = false,
+    Flag = "AutoHunger",
+
+    Callback = function(Value)
+        AutoHunger = Value
+
+        if Value then
+            task.spawn(function()
+                while AutoHunger do
+                    -- Keep checking Hunger
+                    if Hunger.Value < 35 then
+                        -- BUY 3 BORGIRS
+                        if not TeleportTo(Vector3.new(
+                            114.60861206054688,
+                            3.1765737533569336,
+                            124.3687744140625
+                        )) then
+                            task.wait(0.1)
+                            continue
+                        end
+
+                        FireBurgerPrompts()
+                        -- GO TO CARL
+                        TeleportTo(Vector3.new(
+                            101.74232482910156,
+                            3.1765737533569336,
+                            120.81917572021484
+                        ))
+
+                        -- Use Borgir #1
+                        if EquipBorgir() then
+                            fireproximityprompt(SecondPrompt)
+                            task.wait(0.3)
+                        end
+
+                        -- Use Borgir #2
+                        if EquipBorgir() then
+                            fireproximityprompt(SecondPrompt)
+                            task.wait(0.3)
+                        end
+
+                        -- Use Borgir #3
+                        if EquipBorgir() then
+                            fireproximityprompt(SecondPrompt)
+                            task.wait(2.3)
+                        end
+                        -- GO TO HOUSE
+                        TeleportTo(Vector3.new(
+                            112.43353271484375,
+                            3.399897336959839,
+                            26.12542724609375
+                        ))
+
+                        -- Use Borgir #1
+                        if EquipBorgir() then
+                            fireproximityprompt(RefillPrompt)
+                            task.wait(0.3)
+                        end
+
+                        -- Use Borgir #2
+                        if EquipBorgir() then
+                            fireproximityprompt(RefillPrompt)
+                            task.wait(0.3)
+                        end
+
+                        -- Use Borgir #3
+                        if EquipBorgir() then
+                            fireproximityprompt(RefillPrompt)
+                            task.wait(0.3)
+                        end
+                        -- ROUTINE FINISHED
+                        -- Wait 10 seconds before
+                        -- checking Hunger again
+                        task.wait(25)
+
+                    else
+                        -- Hunger is 35 or higher.
+                        -- Keep checking continuously.
+                        task.wait(0.1)
+                    end
+                end
+            end)
+        end
+    end
+})
+--// Teleport
+TeleportTab:CreateButton({
+    Name = "House",
+    Callback = function()
+        TeleportTo(Vector3.new(
+            130.5519561767578,
+            3.399897336959839,
+            25.012100219726562
+        ))
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "Shop",
+    Callback = function()
+        TeleportTo(Vector3.new(
+            115.58708953857422,
+            3.1765737533569336,
+            119.61962127685547
+        ))
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "Cave",
+    Callback = function()
+        TeleportTo(Vector3.new(
+            -145.90536499023438,
+            2.7265737056732178,
+            -66.08316040039062
+        ))
+    end
+})
+--// Settings
+SettingsTab:CreateToggle({
+    Name = "Instant Prompts",
+    CurrentValue = false,
+    Flag = "InstantPrompts",
+
+    Callback = function(Value)
+        if PromptAddedConnection then
+            PromptAddedConnection:Disconnect()
+            PromptAddedConnection = nil
+        end
+
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") then
+                if OriginalHoldDurations[v] == nil then
+                    OriginalHoldDurations[v] = v.HoldDuration
+                end
+
+                v.HoldDuration = Value and 0 or OriginalHoldDurations[v]
+            end
+        end
+
+        if Value then
+            PromptAddedConnection = Workspace.DescendantAdded:Connect(function(v)
+                if v:IsA("ProximityPrompt") then
+                    OriginalHoldDurations[v] = v.HoldDuration
+                    v.HoldDuration = 0
+                end
+            end)
+        end
+    end
+})
+
+SettingsTab:CreateToggle({
+    Name = "Fullbright",
+    CurrentValue = false,
+    Flag = "Fullbright",
+
+    Callback = function(Value)
+        FullbrightEnabled = Value
+
+        if FullbrightConnection then
+            FullbrightConnection:Disconnect()
+            FullbrightConnection = nil
+        end
+
+        if Value then
+            -- Save current lighting
+            local OldBrightness = Lighting.Brightness
+            local OldClockTime = Lighting.ClockTime
+            local OldFogEnd = Lighting.FogEnd
+            local OldGlobalShadows = Lighting.GlobalShadows
+            local OldAmbient = Lighting.Ambient
+
+            local function ApplyFullbright()
+                if not FullbrightEnabled then
+                    return
+                end
+
+                Lighting.Brightness = 1
+                Lighting.ClockTime = 12
+                Lighting.FogEnd = 786543
+                Lighting.GlobalShadows = false
+                Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+            end
+
+            ApplyFullbright()
+
+            FullbrightConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                if FullbrightEnabled then
+                    ApplyFullbright()
+                end
+            end)
+            -- Restore when disabled
+            task.spawn(function()
+                while FullbrightEnabled do
+                    task.wait()
+                end
+
+                Lighting.Brightness = OldBrightness
+                Lighting.ClockTime = OldClockTime
+                Lighting.FogEnd = OldFogEnd
+                Lighting.GlobalShadows = OldGlobalShadows
+                Lighting.Ambient = OldAmbient
+            end)
+        end
+    end
+})
+
+SettingsTab:CreateButton({
+    Name = "Destroy UI",
+    Callback = function()
+        Rayfield:Destroy()
+    end
+})
